@@ -74,3 +74,76 @@ class Planets(db.Model):
             "climate": self.climate
             # do not serialize the password, its a security breach
         }
+
+class Vehicles(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    model = db.Column(db.String(120), unique=False, nullable=False)
+    vehicle_class = db.Column(db.String(120), unique=False, nullable=False)
+    manufacturer = db.Column(db.String(120), unique=False, nullable=False)
+    length = db.Column(db.Integer, unique=False, nullable=False)
+    cargo_capacity = db.Column(db.Integer, unique=False, nullable=False)
+
+    def __repr__(self):
+        return '<Vehicles %r>' % self.id
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "model": self.model,
+            "vehicle_class": self.vehicle_class,
+            "manufacturer": self.manufacturer,
+            "length": self.length,
+            "cargo_capacity": self.cargo_capacity
+            # do not serialize the password, its a security breach
+        }
+
+class Starships(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=False, nullable=False)
+    model = db.Column(db.String(120), unique=False, nullable=False)
+    starship_class = db.Column(db.String(120), unique=False, nullable=False)
+    manufacturer = db.Column(db.String(120), unique=False, nullable=False)
+    length = db.Column(db.Integer, unique=False, nullable=False)
+    passengers = db.Column(db.Integer, unique=False, nullable=False)
+
+    def __repr__(self):
+        return '<Starships %r>' % self.id
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "model": self.model,
+            "starship_class": self.starship_class,
+            "manufacturer": self.manufacturer,
+            "length": self.length,
+            "passengers": self.passengers
+            # do not serialize the password, its a security breach
+        }
+
+class Fav(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship(User)
+    people_id = db.Column(db.Integer, db.ForeignKey('people.id'))
+    people = db.relationship(People)
+    planets_id = db.Column(db.Integer, db.ForeignKey('planets.id'))
+    planets = db.relationship(Planets)
+    vehicles_id = db.Column(db.Integer, db.ForeignKey('vehicles.id'))
+    vehicles = db.relationship(Vehicles)
+    starships_id = db.Column(db.Integer, db.ForeignKey('starships.id'))
+    starships = db.relationship(Starships)
+
+    def __repr__(self):
+        return '<Fav %r>' % self.id
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "people_id": self.people_id,
+            "planets_id": self.planets_id,
+            "vehicles_id": self.vehicles_id,
+            "starships_id": self.starships_id
+            # do not serialize the password, its a security breach
+        }
