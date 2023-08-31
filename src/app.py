@@ -55,6 +55,7 @@ def get_users():
         "msg": "Hola, estos son los usuarios", 
         "results": results
     }
+    return jsonify(response_body), 200
 
 #Devuelve un usuario por id
 @app.route('/users/<int:user_id>', methods=['GET'])
@@ -231,14 +232,14 @@ def get_one_starship(starship_id):
     return jsonify(response_body), 200
 
 #Devuelve los favoritos de un usuario
-@app.route('/users/<int:user_id>/fav', methods=['GET'])
-def get_user_fav(user_id):
+@app.route('/users/<int:id>/fav', methods=['GET'])
+def get_user_fav(id):
     #hacemos la consulta para los favoritos registrados por el usuario
-    favs_querys = Fav.query.filter_by(id = user_id)
+    favs_querys = Fav.query.filter_by(user_id = id)
     #se mapea para convertir el array devuelto a un array de objetos
     results = list(map(lambda fav: fav.serialize(), favs_querys))
     #si el usuario no existe, respondemos que no está registrado y no sigue leyendo el código
-    user_query = User.query.filter_by(id = user_id).first()
+    user_query = User.query.filter_by(id = id).first()
     if user_query is None:
         return jsonify({"msg": "El usuario no está registrado"}), 404
     #si no hay registros, respondemos que no hay favoritos registrados y no sigue leyendo el código
@@ -256,26 +257,250 @@ def get_user_fav(user_id):
 @app.route('/fav/planets/<int:planeta_id>', methods=['POST'])
 def add_planet_fav(planeta_id):
     
-    request_body = request.get_json(force=True)
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
     #validamos que exista el usuario
-    user_query = User.query.filter_by(id = request_body["user_id"]).first()
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
     if user_query is None:
         return jsonify({"msg": "El usuario no está registrado"}), 404
     
-    new_planet_fav = Fav(user_id = request_body["user_id"], planets_id = planeta_id)
-    planet_query = Planets.query.filter_by(id = planeta_id).first()
+    #validamos que exista el planeta
+    planet_query = Planets.query.filter_by(id = planeta_id).first() #id es la propiedad de la tabla Planets y planeta_id es el valor que se pasa por URL
     if planet_query is None:
         return jsonify({"msg": "El planeta no existe"}), 404
-
+    
+    #validamos que el planeta ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(planets_id = planeta_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav: # si la condición anterior es true
+        return jsonify({"msg": "El planeta ya está agregado a favoritos, no se volverá a agregar"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se agrega el planeta a favoritos
+    new_planet_fav = Fav(user_id = request_body["user_id"], planets_id = planeta_id)
     db.session.add(new_planet_fav)
     db.session.commit()
 
-    
-
     request_body = {
-        "msg": "Planeta agregado a favoritos"
+        "msg": "Planeta agregado a favoritos exitosamente"
     }
     return jsonify(request_body), 200
+
+#borrar un planeta favorito
+@app.route('/fav/planets/<int:planeta_id>', methods=['DELETE'])
+def delete_planet_fav(planeta_id):
+    
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
+    #validamos que exista el usuario
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
+    if user_query is None:
+        return jsonify({"msg": "El usuario no está registrado"}), 404
+    
+    #validamos que exista el planeta
+    planet_query = Planets.query.filter_by(id = planeta_id).first() #id es la propiedad de la tabla Planets y planeta_id es el valor que se pasa por URL
+    if planet_query is None:
+        return jsonify({"msg": "El planeta a eliminar no existe"}), 404
+    
+    #validamos que el planeta ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(planets_id = planeta_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav is None:
+        return jsonify({"msg": "El planeta a eliminar no se encuentra en favoritos"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se elimina el planeta de favoritos
+
+    db.session.delete(fav)
+    db.session.commit()
+
+    request_body = {
+        "msg": "Planeta eliminado de favoritos exitosamente"
+    }
+    return jsonify(request_body), 200
+
+#agregar un personaje como favorito
+@app.route('/fav/people/<int:person_id>', methods=['POST'])
+def add_person_fav(person_id):
+    
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
+    #validamos que exista el usuario
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
+    if user_query is None:
+        return jsonify({"msg": "El usuario no está registrado"}), 404
+    
+    #validamos que exista el personaje
+    people_query = People.query.filter_by(id = person_id).first() #id es la propiedad de la tabla People y person_id es el valor que se pasa por URL
+    if people_query is None:
+        return jsonify({"msg": "El personaje no existe"}), 404
+    
+    #validamos que el personaje ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(people_id = person_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav: # si la condición anterior es true
+        return jsonify({"msg": "El personaje ya está agregado a favoritos, no se volverá a agregar"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se agrega el personaje a favoritos
+    new_person_fav = Fav(user_id = request_body["user_id"], people_id = person_id)
+    db.session.add(new_person_fav)
+    db.session.commit()
+
+    request_body = {
+        "msg": "Personaje agregado a favoritos exitosamente"
+    }
+    return jsonify(request_body), 200
+
+#borrar un personaje favorito
+@app.route('/fav/people/<int:person_id>', methods=['DELETE'])
+def delete_person_fav(person_id):
+    
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
+    #validamos que exista el usuario
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
+    if user_query is None:
+        return jsonify({"msg": "El usuario no está registrado"}), 404
+    
+    #validamos que exista el personaje
+    people_query = People.query.filter_by(id = person_id).first() #id es la propiedad de la tabla People y person_id es el valor que se pasa por URL
+    if people_query is None:
+        return jsonify({"msg": "El personaje a eliminar no existe"}), 404
+    
+    #validamos que el personaje ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(people_id = person_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav is None:
+        return jsonify({"msg": "El personaje a eliminar no se encuentra en favoritos"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se elimina el personaje de favoritos
+
+    db.session.delete(fav)
+    db.session.commit()
+
+    request_body = {
+        "msg": "Personaje eliminado de favoritos exitosamente"
+    }
+    return jsonify(request_body), 200
+
+#agregar un vehículo como favorito
+@app.route('/fav/vehicles/<int:vehicle_id>', methods=['POST'])
+def add_vehicle_fav(vehicle_id):
+    
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
+    #validamos que exista el usuario
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
+    if user_query is None:
+        return jsonify({"msg": "El usuario no está registrado"}), 404
+    
+    #validamos que exista el vehículo
+    vehicles_query = Vehicles.query.filter_by(id = vehicle_id).first() #id es la propiedad de la tabla Vehicle y vehicle_id es el valor que se pasa por URL
+    if vehicles_query is None:
+        return jsonify({"msg": "El vehículo no existe"}), 404
+    
+    #validamos que el vehículo ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(vehicles_id = vehicle_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav: # si la condición anterior es true
+        return jsonify({"msg": "El vehículo ya está agregado a favoritos, no se volverá a agregar"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se agrega el vehículo a favoritos
+    new_vehicle_fav = Fav(user_id = request_body["user_id"], vehicles_id = vehicle_id)
+    db.session.add(new_vehicle_fav)
+    db.session.commit()
+
+    request_body = {
+        "msg": "Vehículo agregado a favoritos exitosamente"
+    }
+    return jsonify(request_body), 200
+
+#borrar un vehículo favorito
+@app.route('/fav/vehicles/<int:vehicle_id>', methods=['DELETE'])
+def delete_vehicle_fav(vehicle_id):
+    
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
+    #validamos que exista el usuario
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
+    if user_query is None:
+        return jsonify({"msg": "El usuario no está registrado"}), 404
+    
+    #validamos que exista el vehículo
+    people_query = Vehicles.query.filter_by(id = vehicle_id).first() #id es la propiedad de la tabla Vehicles y vehicle_id es el valor que se pasa por URL
+    if people_query is None:
+        return jsonify({"msg": "El vehículo a eliminar no existe"}), 404
+    
+    #validamos que el vehículo ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(vehicles_id = vehicle_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav is None:
+        return jsonify({"msg": "El vehículo a eliminar no se encuentra en favoritos"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se elimina el vehículo de favoritos
+
+    db.session.delete(fav)
+    db.session.commit()
+
+    request_body = {
+        "msg": "Vehículo eliminado de favoritos exitosamente"
+    }
+    return jsonify(request_body), 200
+
+#agregar una nave como favorito
+@app.route('/fav/starships/<int:starship_id>', methods=['POST'])
+def add_starship_fav(starship_id):
+    
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
+    #validamos que exista el usuario
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
+    if user_query is None:
+        return jsonify({"msg": "El usuario no está registrado"}), 404
+    
+    #validamos que exista la nave
+    starships_query = Starships.query.filter_by(id = starship_id).first() #id es la propiedad de la tabla Starships y starship_id es el valor que se pasa por URL
+    if starships_query is None:
+        return jsonify({"msg": "La nave no existe"}), 404
+    
+    #validamos que la nave ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(starships_id = starship_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav: # si la condición anterior es true
+        return jsonify({"msg": "La nave ya está agregada a favoritos, no se volverá a agregar"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se agrega la nave a favoritos
+    new_starship_fav = Fav(user_id = request_body["user_id"], starships_id = starship_id)
+    db.session.add(new_starship_fav)
+    db.session.commit()
+
+    request_body = {
+        "msg": "Nave agregada a favoritos exitosamente"
+    }
+    return jsonify(request_body), 200
+
+#borrar una nave favorito
+@app.route('/fav/starships/<int:starship_id>', methods=['DELETE'])
+def delete_starship_fav(starship_id):
+    
+    request_body = request.get_json(force=True) #obtiene el cuerpo que se envíe por el body desde el postman
+
+    #validamos que exista el usuario
+    user_query = User.query.filter_by(id = request_body["user_id"]).first() #id = propiedad de la tabla user (items de la izq del =)
+    if user_query is None:
+        return jsonify({"msg": "El usuario no está registrado"}), 404
+    
+    #validamos que exista la nave
+    starships_query = Starships.query.filter_by(id = starship_id).first() #id es la propiedad de la tabla Starships y starships_id es el valor que se pasa por URL
+    if starships_query is None:
+        return jsonify({"msg": "La nave a eliminar no existe"}), 404
+    
+    #validamos que la nave ya existía como fav
+    fav = Fav.query.filter_by(user_id = request_body["user_id"]).filter_by(starships_id = starship_id).first() #devuelve los valores que coinciden (del user_id la tabla Fav) con el body del postman
+    if fav is None:
+        return jsonify({"msg": "La nave a eliminar no se encuentra en favoritos"}), 404
+    
+    #Si no se cumplen las condiciones anteriores, se elimina la nave de favoritos
+
+    db.session.delete(fav)
+    db.session.commit()
+
+    request_body = {
+        "msg": "La nave fue eliminada de favoritos exitosamente"
+    }
+    return jsonify(request_body), 200
+
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
